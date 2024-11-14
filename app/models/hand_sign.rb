@@ -1,0 +1,2 @@
+class HandSign < ApplicationRecord
+end

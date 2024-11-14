@@ -1,0 +1,304 @@
+<div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column;">
+  <h1>Entrega 3 PDS</h1>
+  
+  <% if user_signed_in? %>
+    <p>Bienvenido, <%= current_user.email %>!</p>
+
+    <% if @user.super_user_mode? %>
+      <h1>SUPER USER MODE</h1>
+      
+
+<% if @esp32_logs.any? %>
+  <table id="esp32log_table">
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Message</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @esp32_logs.each do |log| %>
+        <tr>
+          <td><%= log.created_at.strftime("%Y-%m-%d %H:%M:%S") %></td>
+          <td><%= log.message %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p>No hay registros disponibles.</p>
+<% end %>
+
+<h1>Administrar Casilleros</h1>
+
+<<h1>Administrar Casilleros</h1>
+
+<table id="lockers_table">
+  <thead>
+    <tr>
+      <th>Locker ID</th>
+      <th>Usuario Vinculado</th>
+      <th>Contraseña</th>
+      <th>Cambiar Contraseña</th>
+      <th>Vincular Usuario</th>
+      <th>Actualizar</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @lockers.each do |locker| %>
+      <tr>
+        <td><%= locker.id %></td>
+        <td>
+          <%= User.find_by(locker_id: locker.id)&.email || 'Ninguno' %>
+        </td>
+        <td><%= locker.password.nil? ? 'Sin contraseña' : locker.password %></td>
+
+      <!-- Cambiar Contraseña -->
+<td>
+  <%= form_with url: update_password_path(locker_id: locker.id), method: :post, local: true do |f| %>
+    <%= f.number_field :new_password, value: locker.password, min: 1000, max: 9999, required: true %>
+    <%= f.submit 'Cambiar Contraseña' %>
+  <% end %>
+</td>
+<!-- Vincular Usuario -->
+<td>
+  <%= form_with url: update_locker_path, method: :post, local: true do |f| %>
+    <%= f.hidden_field :locker_id, value: locker.id %>
+    <%= f.select :user_id, options_from_collection_for_select(User.all, :id, :email), prompt: "Seleccionar Usuario" %>
+    <%= f.submit 'Actualizar' %>
+  <% end %>
+</td>
+
+
+     <!-- Botón de actualizar -->
+<td>
+  <%= button_to 'Actualizar', update_locker_path(locker_id: locker.id), method: :post, data: { confirm: '¿Estás seguro de actualizar este casillero?' } %>
+</td>
+
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+    <%= form_with url: destroy_user_session_path, method: :delete do %>
+      <%= submit_tag 'Log Out', class: 'btn btn-primary' %>
+      
+    <% end %>
+
+
+    <% else %>
+
+    <% if @user.locker.nil? %>
+      <!-- Dropdown para asignar un locker si no existe uno asignado -->
+      <h3>Asignar un Locker</h3>
+      <%= form_with url: assign_locker_path, method: :post do |f| %>
+        <%= f.label :locker_id, "Selecciona un Locker:" %>
+        <%= f.select :locker_id, options_from_collection_for_select(@available_lockers, :id, :id) %>
+        <%= f.submit "Asignar Locker" %>
+      <% end %>
+
+    <% else %>
+      <!-- Mostrar ID del locker asignado -->
+      <h1>Locker asignado: <%= @user.locker.id %></h1>
+
+      <% if @user.locker.password.nil? %>
+        <!-- Formulario para crear una nueva password -->
+        <h4>Crear Password</h4>
+        <%= form_with url: update_password_with_signs_path(locker_id: @user.locker.id), method: :post do |f| %>
+          <% 4.times do |i| %>
+            <%= f.label "sign_#{i}", "Dígito #{i + 1}:" %>
+            <%= f.select "signs[#{i}]", options_for_select(HandSign.all.map { |sign| [sign.name, sign.id, { data: { image_link: sign.image_link } }] }, include_blank: true), onchange: "updateSignImage(#{i})" %>
+            <%= image_tag "", id: "sign_image_#{i}", alt: "Imagen del signo #{i + 1}", style: "width: 50px; height: 50px;" %>
+            <br>
+          <% end %>
+          <%= f.submit "Crear Password" %>
+        <% end %>
+
+      <% else %>
+        <!-- Mostrar el password actual -->
+        <h2>Password actual:</h2>
+
+        <!-- Tabla para mostrar cada dígito del password con su imagen -->
+        <table>
+          <thead>
+            <tr>
+            
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <% @user.locker.password.to_s.chars.each do |digit| %>
+                <% sign = HandSign.find(digit.to_i) %>
+                <td><%= digit %></td>
+                <td><%= image_tag(sign.image_link, width: 100, height: 100) if sign %></td>
+              <% end %>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Formulario para cambiar el password seleccionando signos -->
+        <h4>Cambiar Password!</h4>
+        <%= form_with url:update_password_with_signs_path(locker_id: @user.locker.id), method: :post do |f| %>
+          <% 4.times do |i| %>
+            <%= f.label "sign_#{i}", "Dígito #{i + 1}:" %>
+            <%= f.select "signs[#{i}]", options_for_select(HandSign.all.map { |sign| [sign.name, sign.id, { data: { image_link: sign.image_link } }] }, include_blank: true), onchange: "updateSignImage(#{i})" %>
+            <%= image_tag "", id: "sign_image_#{i}", alt: "Imagen del signo #{i + 1}", style: "width: 50px; height: 50px;" %>
+            <br>
+          <% end %>
+          <%= f.submit "Actualizar Password" %>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <%= form_with url: destroy_user_session_path, method: :delete do %>
+      <%= submit_tag 'Log Out', class: 'btn btn-primary' %>
+      
+    <% end %>
+ 
+    <% end %>
+<!-- Botón para mostrar/ocultar la tabla de registros de esp32log -->
+<button id="show_logs_btn" onclick="toggleLogs()">Mostrar Logs</button>
+
+<table id="esp32log_table" style="display: none;">
+  <thead>
+    <tr>
+      <th>Open Time</th>
+      <th>Close Time</th>
+    </tr>
+  </thead>
+  <tbody id="esp32log_table_body">
+    <% @esp32_logs.each do |log| %>
+      <tr class="esp32log_row" data-message="<%= log.message %>" data-timestamp="<%= log.created_at.to_i %>">
+        <td class="open_time"></td>
+        <td class="close_time"><%= log.created_at %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+ 
+<!-- Botón para mostrar los logs -->
+<button id="show_logs_btn" onclick="toggleLogs()">Mostrar Logs</button>
+
+<script>
+  const lockerId = <%= @user.locker.id if @user.locker %>;  // Asignar el locker_id del usuario
+
+  // Función para mostrar/ocultar los logs
+  function toggleLogs() {
+    const table = document.getElementById('esp32log_table');
+    const button = document.getElementById('show_logs_btn');
+    
+    // Mostrar u ocultar la tabla
+    if (table.style.display === "none") {
+      table.style.display = "block";
+      button.innerText = "Ocultar Logs";
+      filterLogs();
+    } else {
+      table.style.display = "none";
+      button.innerText = "Mostrar Logs";
+    }
+  }
+
+  // Función para filtrar los logs en el frontend
+  function filterLogs() {
+    const rows = document.querySelectorAll('.esp32log_row');
+    
+    rows.forEach(row => {
+      const message = row.getAttribute('data-message');
+      const timestamp = parseInt(row.getAttribute('data-timestamp'));  // Obtener el timestamp en segundos
+      const openTimeCell = row.querySelector('.open_time');
+      
+      // Intenta convertir el mensaje en JSON y verificar el penúltimo caracter
+      try {
+        const jsonMessage = JSON.parse(message);
+        
+        if (jsonMessage.locksub === lockerId) {
+          row.style.display = "table-row";  // Mostrar fila si el locker_id coincide
+
+          // Si existe count2 en el mensaje, calcular Open Time
+          if (jsonMessage.count2) {
+            const count2 = jsonMessage.count2;
+
+            // Calcular Open Time: timestamp menos count2 en segundos
+            const openTime = new Date(timestamp * 1000 - (count2 * 1000));  // Restar count2 en segundos
+            openTime.setHours(openTime.getHours() + 3);
+            openTimeCell.textContent = openTime.toLocaleString();  // Mostrar Open Time
+          } else {
+            openTimeCell.textContent = "N/A";  // Si no existe count2, mostrar N/A
+          }
+          
+        } else {
+          row.style.display = "none";  // Ocultar fila si no coincide
+        }
+      } catch (e) {
+        // Si no se puede convertir a JSON, ocultamos la fila
+        row.style.display = "none";
+      }
+    });
+  }
+
+  
+  // Función para filtrar los logs en el frontend
+  function filterLogsSuper() {
+    const rows = document.querySelectorAll('.esp32log_row');
+    
+    rows.forEach(row => {
+      const message = row.getAttribute('data-message');
+      const timestamp = parseInt(row.getAttribute('data-timestamp'));  // Obtener el timestamp en segundos
+      const openTimeCell = row.querySelector('.open_time');
+      
+      // Intenta convertir el mensaje en JSON y verificar el penúltimo caracter
+      try {
+        const jsonMessage = JSON.parse(message);
+        
+        if (1===1) {
+          row.style.display = "table-row";  // Mostrar fila si el locker_id coincide
+
+          // Si existe count2 en el mensaje, calcular Open Time
+          if (jsonMessage.count2) {
+            const count2 = jsonMessage.count2;
+
+            // Calcular Open Time: timestamp menos count2 en segundos
+            const openTime = new Date(timestamp * 1000 - (count2 * 1000));  // Restar count2 en segundos
+            openTime.setHours(openTime.getHours() + 3);
+            openTimeCell.textContent = openTime.toLocaleString();  // Mostrar Open Time
+          } else {
+            openTimeCell.textContent = "N/A";  // Si no existe count2, mostrar N/A
+          }
+          
+        } else {
+          row.style.display = "none";  // Ocultar fila si no coincide
+        }
+      } catch (e) {
+        // Si no se puede convertir a JSON, ocultamos la fila
+        row.style.display = "none";
+      }
+    });
+  }
+
+
+  function updateSignImage(index) {
+    const selectElement = document.querySelector(`[name='signs[${index}]']`);
+    const imageLink = selectElement.options[selectElement.selectedIndex].dataset.imageLink;
+    const imageTag = document.getElementById(`sign_image_${index}`);
+    
+    imageTag.src = imageLink ? `/assets/${imageLink}` : "";
+  }
+</script>
+
+    <script>
+      function updateSignImage(index) {
+        const selectElement = document.querySelector(`[name='signs[${index}]']`);
+        const imageLink = selectElement.options[selectElement.selectedIndex].dataset.imageLink;
+        const imageTag = document.getElementById(`sign_image_${index}`);
+        
+        imageTag.src = imageLink ? `/assets/${imageLink}` : "";
+      }
+    </script>
+  
+  <% else %>
+    <%= link_to 'Sign In', new_user_session_path, class: 'btn btn-primary' %>
+    <%= link_to 'Sign Up', new_user_registration_path, class: 'btn btn-secondary' %>
+    <%= link_to "Sign in with Google", user_google_oauth2_omniauth_authorize_path, class: "btn btn-primary" %>
+  <% end %>
+</div>
