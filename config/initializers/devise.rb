@@ -311,11 +311,5 @@ Devise.setup do |config|
   # changed. Defaults to true, so a user is signed in automatically after changing a password.
   # config.sign_in_after_change_password = true
 
-  #OMNIAUTH ADDED WITH THE HELP OF DIEGO'S UNCLE!!
-  config.omniauth :google_oauth2, '371593520110-63anqgfsivndpb5las4q0kvm778ci0ck.apps.googleusercontent.com', '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', {
-    scope: 'userinfo.email, userinfo.profile',
-    prompt: 'select_account',
-    image_aspect_ratio: 'square',
-    image_size: 50
-  }
+
 end
